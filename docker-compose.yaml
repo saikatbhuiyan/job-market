@@ -41,8 +41,56 @@ services:
       - postgres-data:/var/lib/postgresql/data
     env_file:
       - .env
+  rabbitmq:
+    container_name: rabbitmq-server
+    image: rabbitmq:3.12-rc-management-alpine
+    restart: always
+    ports:
+      # management
+      - "15672:15672"
+      # amqp
+      - "5672:5672"
+  elasticsearch:
+    container_name: elasticsearch-server
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
+    restart: always
+    environment:
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      bootstrap.memory_lock: true
+      discovery.type: single-node
+      xpack.security.enabled: false
+      xpack.security.authc.api_key.enabled: false
+      xpack.monitoring.collection.enabled: true
+      xpack.security.http.ssl.enabled: false
+      xpack.security.enrollment.enabled: false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+  kibana:
+    container_name: kibana-server
+    image: docker.elastic.co/kibana/kibana:8.17.1
+    restart: always
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=["http://elasticsearch-server:9200"]
+    networks:
+      - elastic
+    # volumes:
+    #   - ./kibana.yml/:/usr/share/kibana/config/kibana.yml:ro
+    depends_on:
+      - elasticsearch
 
 volumes:
   redis-data:
   mysql-data:
   postgres-data:
+  elasticsearch-data:
+
+networks:
+  elastic:
+    name: elastic
