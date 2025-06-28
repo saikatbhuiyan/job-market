@@ -55,14 +55,16 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
     restart: always
     environment:
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
-      bootstrap.memory_lock: true
+      ES_JAVA_OPTS: "-Xmx512m -Xms512m"
+      bootstrap.memory_lock: "true"
       discovery.type: single-node
-      xpack.security.enabled: false
-      xpack.security.authc.api_key.enabled: false
-      xpack.monitoring.collection.enabled: true
-      xpack.security.http.ssl.enabled: false
-      xpack.security.enrollment.enabled: false
+      network.host: 0.0.0.0
+      transport.host: 127.0.0.1
+      http.host: 0.0.0.0
+      xpack.security.enabled: "false"
+      xpack.monitoring.collection.enabled: "true"
+    env_file:
+      - .env
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -70,27 +72,48 @@ services:
       - elasticsearch-data:/usr/share/elasticsearch/data
     networks:
       - elastic
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   kibana:
     container_name: kibana-server
-    image: docker.elastic.co/kibana/kibana:8.17.1
+    image: docker.elastic.co/kibana/kibana:8.17.1 # Updated to match Elasticsearch version
     restart: always
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch-server:9200
+      - XPACK_FLEET_AGENTS_ELASTICSEARCH_HOSTS=["http://elasticsearch-server:9200"]
+      - SERVER_HOST=0.0.0.0
+    env_file:
+      - .env
     ports:
       - "5601:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=["http://elasticsearch-server:9200"]
+    volumes:
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml:ro
     networks:
       - elastic
-    # volumes:
-    #   - ./kibana.yml/:/usr/share/kibana/config/kibana.yml:ro
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   redis-data:
   mysql-data:
   postgres-data:
   elasticsearch-data:
-
+    driver: local
 networks:
   elastic:
-    name: elastic
+    driver: bridge
