@@ -15,11 +15,11 @@
     "trailingComma": "es5"
   },
   "keywords": [],
-  "name": "job-market-shared",
+  "name": "@saikatbhuiyan/job-market-shared",
   "author": "Md. Shahabuddin Bhuiyan",
   "repository": {
     "type": "git",
-    "url": "https://github.com/saikatbhuiyan/job-market/tree/application-setup/shared"
+    "url": "https://github.com/saikatbhuiyan/job-market-shared.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
